@@ -57,7 +57,7 @@
           <option value="7x7_50">DICT_7X7_50</option>
         </select>
       </label>
-      <button class="primary" id="startBtn" disabled>啟動鏡頭</button>
+      <button class="primary" id="startBtn">啟動鏡頭</button>
       <button id="stopBtn" disabled>停止</button>
     </div>
     <p id="libStatus" class="small muted">正在載入偵測程式……</p>
@@ -138,7 +138,7 @@
   }
   async function start() {
     showError('');
-    if (!cvReady) { showError('偵測程式仍在載入，請稍候再試。'); return; }
+    // Camera access must not depend on OpenCV loading. Start the camera first; detection can be checked separately.
     try {
       await stop();
       const deviceId = $('cameraSelect').value;
@@ -157,7 +157,7 @@
     } catch (e) {
       showError('無法啟動鏡頭：' + (e.message || e.name) + '\\n請確認網站使用 HTTPS／localhost，並允許鏡頭權限。');
       setStatus('鏡頭未能啟動','warn');
-      $('startBtn').disabled = !cvReady; $('stopBtn').disabled = true;
+      $('startBtn').disabled = false; $('stopBtn').disabled = true;
     }
   }
   async function stop() {
@@ -165,7 +165,7 @@
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     video.srcObject = null;
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    $('stopBtn').disabled = true; $('startBtn').disabled = !cvReady;
+    $('stopBtn').disabled = true; $('startBtn').disabled = false;
     setStatus('已停止');
   }
   function loop() {
@@ -174,7 +174,21 @@
     if (!w || !h) { raf = requestAnimationFrame(loop); return; }
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     ctx.clearRect(0,0,w,h);
+    if (!cvReady) {
+      $('statusText').textContent = '鏡頭運作中；偵測程式載入中';
+      $('statusDot').className = 'dot warn';
+      $('latestHint').textContent = '鏡頭已開啟。若此訊息持續，請重新載入頁面或檢查網絡。';
+      raf = requestAnimationFrame(loop);
+      return;
+    }
     try {
+      if (!cv.aruco || typeof cv.aruco.detectMarkers !== 'function') {
+        $('statusText').textContent = '鏡頭運作中；此版本未提供 ArUco 偵測模組';
+        $('statusDot').className = 'dot warn';
+        $('latestHint').textContent = '鏡頭已成功開啟，但需要更換支援 ArUco 的偵測程式。';
+        raf = requestAnimationFrame(loop);
+        return;
+      }
       const src = cv.imread(video);
       const gray = new cv.Mat();
       cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
@@ -219,7 +233,7 @@
       if (now - fpsStart >= 1000) { $('fps').textContent = Math.round(frameCount*1000/(now-fpsStart))+' fps'; fpsStart=now; frameCount=0; }
     } catch (e) {
       showError(e.message || String(e));
-      running = false; $('startBtn').disabled = !cvReady; $('stopBtn').disabled = true;
+      running = false; $('startBtn').disabled = false; $('stopBtn').disabled = true;
       setStatus('偵測程式出錯','warn');
       return;
     }
@@ -241,6 +255,7 @@
   $('dictionary').addEventListener('change', () => { if (running) { stop().then(start); } });
   if (!navigator.mediaDevices?.getUserMedia) showError('此瀏覽器不支援鏡頭存取，請改用較新的 Chrome、Edge 或 Safari。');
   waitForCv();
+  setTimeout(() => { if (!cvReady) libStatus.textContent = '鏡頭按鈕可先用來測試相機；偵測程式仍未載入，請確認網絡連線。'; }, 5000);
   populateCameras();
 })();
 </script>
