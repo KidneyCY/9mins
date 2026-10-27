@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>佩章鏡頭偵測測試</title>
+<style>
+  :root { color-scheme: light; --ink:#172033; --muted:#5d687a; --line:#d8deea; --panel:#fff; --bg:#f3f6fb; --accent:#1769e0; --good:#137547; --warn:#925400; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:1050px; margin:auto; padding:22px 16px 40px; }
+  h1 { font-size:clamp(1.5rem,4vw,2.15rem); margin:0 0 6px; }
+  p { margin:6px 0 14px; }
+  .muted { color:var(--muted); }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-top:14px; box-shadow:0 4px 18px #1c31500a; }
+  .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+  label { display:grid; gap:5px; font-weight:650; font-size:.92rem; }
+  select,button { min-height:42px; border-radius:10px; border:1px solid var(--line); padding:8px 12px; font:inherit; background:white; color:var(--ink); }
+  button { cursor:pointer; font-weight:700; }
+  button.primary { background:var(--accent); color:white; border-color:var(--accent); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .camera-grid { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(230px,1fr); gap:14px; align-items:start; }
+  .video-wrap { position:relative; overflow:hidden; border-radius:12px; background:#101827; aspect-ratio:4/3; }
+  video, canvas { width:100%; height:100%; object-fit:contain; display:block; }
+  canvas { position:absolute; inset:0; }
+  .status { display:flex; gap:8px; align-items:center; font-weight:700; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#9aa4b2; }
+  .dot.good { background:#16a05d; } .dot.warn { background:#d18a13; }
+  .big-id { font-size:clamp(2.8rem,8vw,4.5rem); line-height:1.1; font-weight:850; letter-spacing:-.04em; margin:12px 0; }
+  .id-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip { background:#e8f0ff; color:#124da8; border:1px solid #c9dcff; border-radius:999px; padding:5px 11px; font-weight:750; }
+  .chip.new { background:#e5f7ed; color:#09653b; border-color:#b7e7ca; }
+  .note { border-left:4px solid #e3a02c; padding:9px 12px; background:#fff7e8; border-radius:6px; }
+  .error { color:#a32b22; white-space:pre-wrap; }
+  .small { font-size:.9rem; }
+  @media(max-width:700px) { .camera-grid { grid-template-columns:1fr; } main { padding:16px 10px 30px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>佩章鏡頭偵測測試</h1>
+  <p class="muted">用手機或電腦鏡頭讀取佩章上的 ArUco 編號（預期編號 1–15）。請先用一張已列印的佩章測試。</p>
+
+  <section class="panel">
+    <div class="controls">
+      <label>鏡頭
+        <select id="cameraSelect"><option value="">自動選擇</option></select>
+      </label>
+      <label>標記字典
+        <select id="dictionary">
+          <option value="4x4_50" selected>DICT_4X4_50（常用）</option>
+          <option value="4x4_100">DICT_4X4_100</option>
+          <option value="5x5_50">DICT_5X5_50</option>
+          <option value="5x5_100">DICT_5X5_100</option>
+          <option value="6x6_50">DICT_6X6_50</option>
+          <option value="6x6_100">DICT_6X6_100</option>
+          <option value="7x7_50">DICT_7X7_50</option>
+        </select>
+      </label>
+      <button class="primary" id="startBtn" disabled>啟動鏡頭</button>
+      <button id="stopBtn" disabled>停止</button>
+    </div>
+    <p id="libStatus" class="small muted">正在載入偵測程式……</p>
+    <p id="error" class="error" role="alert"></p>
+  </section>
+
+  <section class="panel camera-grid">
+    <div>
+      <div class="video-wrap">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <p class="small muted">建議：保持佩章平整、四周白邊完整，避免反光；先讓標記佔畫面較大部分，再逐步拉遠測試。</p>
+    </div>
+    <div>
+      <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">未啟動</span></div>
+      <div class="muted small" style="margin-top:14px">最近辨認到的編號</div>
+      <div id="latestId" class="big-id">—</div>
+      <div id="latestHint" class="muted small">鏡頭啟動後，將佩章對準畫面。</div>
+      <div style="margin-top:18px;font-weight:750">本次已辨認編號</div>
+      <div id="seenIds" class="id-list"><span class="muted small">尚未辨認到</span></div>
+      <div style="margin-top:18px" class="small muted">讀取率：<strong id="fps">—</strong></div>
+      <button id="clearBtn" style="margin-top:12px">清除記錄</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 style="font-size:1.12rem;margin:0 0 8px">測試注意</h2>
+    <div class="note small">如果完全讀不到，最常見原因是「標記字典」同印出 PDF 時使用的字典不一致。請選回生成佩章時使用的字典；若不確定，逐個選項試一次。</div>
+    <p class="small muted" style="margin-top:12px">瀏覽器限制：一般情況下，鏡頭只可在 HTTPS 網站或 localhost 使用；第一次啟動時請允許網站使用鏡頭。此頁面會在你的瀏覽器本機處理即時畫面，不會把影像上傳到伺服器。</p>
+  </section>
+</main>
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const video = $('video'), canvas = $('overlay'), ctx = canvas.getContext('2d');
+  let stream = null, running = false, raf = 0, lastTime = 0, frameCount = 0, fpsStart = 0;
+  let seen = new Set(), lastFoundAt = 0, cvReady = false;
+  const dictMap = {
+    '4x4_50':'DICT_4X4_50','4x4_100':'DICT_4X4_100',
+    '5x5_50':'DICT_5X5_50','5x5_100':'DICT_5X5_100',
+    '6x6_50':'DICT_6X6_50','6x6_100':'DICT_6X6_100','7x7_50':'DICT_7X7_50'
+  };
+  const libStatus = $('libStatus'), errorEl = $('error');
+  function setStatus(text, kind='') {
+    $('statusText').textContent = text;
+    $('statusDot').className = 'dot' + (kind ? ' '+kind : '');
+  }
+  function showError(message) { errorEl.textContent = message || ''; }
+  function waitForCv() {
+    if (window.cv && typeof cv.Mat === 'function') {
+      if (cv.getBuildInformation) ready();
+      else cv.onRuntimeInitialized = ready;
+      return;
+    }
+    setTimeout(waitForCv, 250);
+  }
+  function ready() {
+    if (cvReady) return;
+    cvReady = true;
+    libStatus.textContent = '偵測程式已載入。選擇字典後可以啟動鏡頭。';
+    $('startBtn').disabled = false;
+  }
+  async function populateCameras() {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const sel = $('cameraSelect'), old = sel.value;
+      sel.innerHTML = '<option value="">自動選擇</option>';
+      devices.filter(d => d.kind === 'videoinput').forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId; opt.textContent = d.label || `鏡頭 ${i+1}`;
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some(o => o.value === old)) sel.value = old;
+    } catch (_) {}
+  }
+  async function start() {
+    showError('');
+    if (!cvReady) { showError('偵測程式仍在載入，請稍候再試。'); return; }
+    try {
+      await stop();
+      const deviceId = $('cameraSelect').value;
+      const videoConstraints = deviceId ? { deviceId: { exact: deviceId }, width:{ideal:1280}, height:{ideal:720} }
+                                        : { facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} };
+      stream = await navigator.mediaDevices.getUserMedia({ video:videoConstraints, audio:false });
+      video.srcObject = stream;
+      await video.play();
+      running = true;
+      $('startBtn').disabled = true; $('stopBtn').disabled = false;
+      setStatus('鏡頭運作中','good');
+      $('latestHint').textContent = '正在掃描畫面……';
+      await populateCameras();
+      fpsStart = performance.now(); frameCount = 0;
+      loop();
+    } catch (e) {
+      showError('無法啟動鏡頭：' + (e.message || e.name) + '\\n請確認網站使用 HTTPS／localhost，並允許鏡頭權限。');
+      setStatus('鏡頭未能啟動','warn');
+      $('startBtn').disabled = !cvReady; $('stopBtn').disabled = true;
+    }
+  }
+  async function stop() {
+    running = false; cancelAnimationFrame(raf);
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    video.srcObject = null;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    $('stopBtn').disabled = true; $('startBtn').disabled = !cvReady;
+    setStatus('已停止');
+  }
+  function loop() {
+    if (!running || video.readyState < 2) { if (running) raf = requestAnimationFrame(loop); return; }
+    const w = video.videoWidth, h = video.videoHeight;
+    if (!w || !h) { raf = requestAnimationFrame(loop); return; }
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    ctx.clearRect(0,0,w,h);
+    try {
+      const src = cv.imread(video);
+      const gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      const dictionaryKey = dictMap[$('dictionary').value];
+      const dictionaryConst = cv.aruco && cv.aruco[dictionaryKey];
+      if (!cv.aruco || typeof cv.aruco.getPredefinedDictionary !== 'function' ||
+          typeof cv.aruco.detectMarkers !== 'function' || dictionaryConst === undefined) {
+        src.delete(); gray.delete();
+        throw new Error('目前載入的 OpenCV.js 版本似乎沒有 ArUco 模組。請使用支援 ArUco 的 OpenCV.js build。');
+      }
+      const dictionary = cv.aruco.getPredefinedDictionary(dictionaryConst);
+      const corners = new cv.MatVector(), ids = new cv.Mat();
+      const params = cv.aruco.DetectorParameters ? new cv.aruco.DetectorParameters() : new cv.aruco_DetectorParameters();
+      cv.aruco.detectMarkers(gray, dictionary, corners, ids, params);
+      if (ids.rows > 0) {
+        cv.aruco.drawDetectedMarkers(src, corners, ids);
+        cv.imshow(canvas, src);
+        const found = [];
+        for (let i=0; i<ids.rows; i++) {
+          const id = ids.intAt(i,0);
+          found.push(id);
+          if (id >= 1 && id <= 15) seen.add(id);
+        }
+        found.sort((a,b)=>a-b);
+        $('latestId').textContent = found.join(', ');
+        $('latestHint').textContent = found.some(id=>id>=1&&id<=15) ? '已辨認到畫面中的標記' : '辨認到標記，但編號不在 1–15 範圍內';
+        $('statusText').textContent = '已辨認到 ' + found.length + ' 個標記';
+        $('statusDot').className = 'dot good';
+        lastFoundAt = performance.now();
+        renderSeen(found);
+      } else {
+        cv.imshow(canvas, src);
+        if (performance.now() - lastFoundAt > 1200) {
+          $('latestId').textContent = '—';
+          $('latestHint').textContent = '未見標記；請調整距離、角度或光線。';
+          setStatus('掃描中');
+        }
+      }
+      corners.delete(); ids.delete(); params.delete(); dictionary.delete(); gray.delete(); src.delete();
+      frameCount++;
+      const now = performance.now();
+      if (now - fpsStart >= 1000) { $('fps').textContent = Math.round(frameCount*1000/(now-fpsStart))+' fps'; fpsStart=now; frameCount=0; }
+    } catch (e) {
+      showError(e.message || String(e));
+      running = false; $('startBtn').disabled = !cvReady; $('stopBtn').disabled = true;
+      setStatus('偵測程式出錯','warn');
+      return;
+    }
+    raf = requestAnimationFrame(loop);
+  }
+  function renderSeen(current=[]) {
+    const el = $('seenIds'); el.innerHTML = '';
+    if (!seen.size) { el.innerHTML = '<span class="muted small">尚未辨認到 1–15 號</span>'; return; }
+    [...seen].sort((a,b)=>a-b).forEach(id => {
+      const chip = document.createElement('span');
+      chip.className = 'chip' + (current.includes(id) ? ' new' : '');
+      chip.textContent = String(id);
+      el.appendChild(chip);
+    });
+  }
+  $('startBtn').addEventListener('click', start);
+  $('stopBtn').addEventListener('click', stop);
+  $('clearBtn').addEventListener('click', () => { seen.clear(); renderSeen(); $('latestId').textContent='—'; });
+  $('dictionary').addEventListener('change', () => { if (running) { stop().then(start); } });
+  if (!navigator.mediaDevices?.getUserMedia) showError('此瀏覽器不支援鏡頭存取，請改用較新的 Chrome、Edge 或 Safari。');
+  waitForCv();
+  populateCameras();
+})();
+</script>
+</body>
+</html>
