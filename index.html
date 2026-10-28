@@ -75,7 +75,7 @@ function detectMarkers(rgba,w,h,DICT){
  for(let i=0,j=0;i<n;i++,j+=4)g[i]=(rgba[j]*77+rgba[j+1]*150+rgba[j+2]*29)>>8;
  const W1=w+1,ii=new Uint32Array(W1*(h+1));
  for(let y=0;y<h;y++){let row=0;for(let x=0;x<w;x++){row+=g[y*w+x];ii[(y+1)*W1+x+1]=ii[y*W1+x+1]+row}}
- const r=Math.max(10,Math.round(w/16)),bin=new Uint8Array(n);
+ const r=Math.max(10,Math.round(Math.max(w,h)/20)),bin=new Uint8Array(n);
  for(let y=0;y<h;y++){const y0=Math.max(0,y-r),y1=Math.min(h,y+r+1);
   for(let x=0;x<w;x++){const x0=Math.max(0,x-r),x1=Math.min(w,x+r+1);
    const s=ii[y1*W1+x1]-ii[y0*W1+x1]-ii[y1*W1+x0]+ii[y0*W1+x0],a=(x1-x0)*(y1-y0);
@@ -118,7 +118,7 @@ function detectMarkers(rgba,w,h,DICT){
   if(!dn||!ln)continue;const thr=(ds/dn+ls/ln)/2;if(ls/ln-ds/dn<40)continue;
   const dark=cell.map(v=>v<thr?1:0);let bd=0;
   for(let rr=0;rr<6;rr++)for(let c=0;c<6;c++)if((rr===0||rr===5||c===0||c===5)&&dark[rr*6+c])bd++;
-  if(bd<19)continue;
+  if(bd<18)continue;
   let gr=[];for(let rr=1;rr<5;rr++)for(let c=1;c<5;c++)gr.push(dark[rr*6+c]);
   for(let k=0;k<4;k++){const id=DICT[gr.join('')];if(id!==undefined){out.push({id,corners:P,cx:(P[0][0]+P[1][0]+P[2][0]+P[3][0])/4,cy:(P[0][1]+P[1][1]+P[2][1]+P[3][1])/4});break}gr=rot4(gr)}
  }
@@ -126,11 +126,11 @@ function detectMarkers(rgba,w,h,DICT){
 
 
 const DICT=makeDict({"1": [0, 0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 255, 255, 0, 255, 0], "2": [0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 255, 0, 255], "3": [255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 0, 0, 0, 255, 255, 0], "4": [0, 255, 0, 255, 0, 255, 0, 0, 255, 0, 0, 255, 255, 255, 255, 0], "5": [0, 255, 255, 255, 255, 0, 0, 255, 255, 255, 0, 0, 255, 255, 0, 255], "6": [255, 0, 0, 255, 255, 255, 255, 0, 0, 0, 255, 0, 255, 255, 255, 0], "7": [255, 255, 0, 0, 0, 255, 0, 0, 255, 255, 255, 255, 0, 0, 255, 0], "8": [255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 0, 255, 255, 0, 255, 0], "9": [255, 255, 0, 0, 255, 255, 255, 255, 0, 255, 0, 255, 0, 255, 255, 0], "10": [255, 255, 255, 255, 255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 0, 255], "11": [0, 0, 0, 255, 0, 0, 0, 255, 255, 0, 255, 0, 0, 255, 255, 255], "12": [0, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255, 255, 0, 255, 255, 255], "13": [0, 0, 255, 0, 255, 0, 255, 0, 0, 0, 0, 0, 255, 255, 255, 255], "14": [0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 255, 255, 0, 0, 0, 255], "15": [0, 0, 255, 0, 0, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 0]});
-let S={phase:'setup',names:[],laps:[],extra:[],start:0,end:0,dur:540000,lapLen:120,text:'',minLap:15,log:[],cam:{axis:'v',pos:.5,dir:0,res:960,facing:'environment'}};
+let S={phase:'setup',names:[],laps:[],extra:[],start:0,end:0,dur:540000,lapLen:120,text:'',minLap:15,log:[],cam:{axis:'v',pos:.5,dir:0,res:1280,mode:'zone',bw:.35,facing:'environment'}};
 let timer=null,actx=null,wake=null,endArm=null,stream=null,looping=false,busy=false,lastRun=0,tracks={},lastDets=[],lastDim=[16,9],fpsN=0,fpsT=0,fps=0;
 const off=document.createElement('canvas'),octx=off.getContext('2d',{willReadFrequently:true});
-function save(){try{localStorage.setItem('run9-cam',JSON.stringify(S))}catch(e){}}
-function load(){try{const j=JSON.parse(localStorage.getItem('run9-cam')||'null');if(j&&j.names)S=Object.assign(S,j,{cam:Object.assign(S.cam,j.cam||{})})}catch(e){}}
+function save(){try{localStorage.setItem('run9-cam2',JSON.stringify(S))}catch(e){}}
+function load(){try{const j=JSON.parse(localStorage.getItem('run9-cam2')||'null');if(j&&j.names)S=Object.assign(S,j,{cam:Object.assign(S.cam,j.cam||{})})}catch(e){}}
 const fmt=ms=>{ms=Math.max(0,ms);const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 const fmt1=ms=>{const t=Math.floor(ms/100)/10;return Math.floor(t/60)+':'+(t%60).toFixed(1).padStart(4,'0')};
 
@@ -160,24 +160,27 @@ function renderSetup(){
 const vidHTML=cls=>`<div class="vid ${cls}"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas></div>`;
 function renderCam(){
  const c=S.cam,vv=c.axis==='v';
- $('#app').innerHTML=`<h1>設定鏡頭</h1><p class="sub">將鏡頭對住過線位置，調整綠線。佩章嘅中心掃過綠線就計一圈。呢頁係測試模式，唔會計圈。</p>${vidHTML('')}
+ $('#app').innerHTML=`<h1>設定鏡頭</h1><p class="sub">將鏡頭對住過線位置，調整綠線。「區域」模式：綠色範圍內見到佩章就計一圈；「過線」模式：要見到佩章橫過綠線。呢頁係測試模式，唔會計圈。</p>${vidHTML('')}
  <div class="ctl"><div><label for="ax">綠線方向</label><select id="ax"><option value="v"${vv?' selected':''}>垂直線（學生左右橫過）</option><option value="h"${vv?'':' selected'}>水平線（學生上下過）</option></select></div>
  <div><label for="dr">計圈方向</label><select id="dr"><option value="0"${c.dir===0?' selected':''}>任何方向</option><option value="1"${c.dir===1?' selected':''}>${vv?'由左至右':'由上至下'}</option><option value="-1"${c.dir===-1?' selected':''}>${vv?'由右至左':'由下至上'}</option></select></div>
- <div><label for="ps">綠線位置</label><input id="ps" type="range" min="5" max="95" value="${Math.round(c.pos*100)}"></div>
- <div><label for="rs">偵測解析度</label><select id="rs"><option value="640"${c.res===640?' selected':''}>640（快，只適合近距離）</option><option value="960"${c.res===960?' selected':''}>960（預設）</option><option value="1280"${c.res===1280?' selected':''}>1280（遠距離，較慢）</option></select></div></div>
+ <div><label for="md">記圈方式</label><select id="md"><option value="zone"${c.mode==='zone'?' selected':''}>區域（建議）：範圍內見到就計</option><option value="line"${c.mode==='line'?' selected':''}>過線：要見到橫過綠線</option></select></div>
+ <div><label for="bw">區域闊度</label><select id="bw">${[20,35,60,100].map(p=>`<option value="${p}"${Math.round(c.bw*100)===p?' selected':''}>${p===100?'全畫面':p+'%'}</option>`).join('')}</select></div>
+ <div><label for="ps">綠線／區域位置</label><input id="ps" type="range" min="5" max="95" value="${Math.round(c.pos*100)}"></div>
+ <div><label for="rs">偵測解析度</label><select id="rs"><option value="960"${c.res===960?' selected':''}>960（快，近距離）</option><option value="1280"${c.res===1280?' selected':''}>1280（預設）</option><option value="1920"${c.res===1920?' selected':''}>1920（遠距離，較慢）</option></select></div></div>
  <div class="note" id="seen">開啟鏡頭中…</div><div class="feed" id="feed" style="margin-top:8px"></div>
  <div class="acts"><button class="btn" id="go2" style="font-size:20px;padding:16px 28px">開始計時</button><button class="btn ghost" id="flip">切換前後鏡頭</button><button class="btn ghost" id="bk">返回修改名單</button></div>`;
  $('#ax').onchange=e=>{c.axis=e.target.value;save();renderCam()};
  $('#dr').onchange=e=>{c.dir=+e.target.value;save()};
  $('#ps').oninput=e=>{c.pos=e.target.value/100;save();drawOverlay()};
  $('#rs').onchange=e=>{c.res=+e.target.value;save()};
+ $('#md').onchange=e=>{c.mode=e.target.value;save();drawOverlay()};$('#bw').onchange=e=>{c.bw=+e.target.value/100;save();drawOverlay()};
  $('#flip').onclick=()=>{c.facing=c.facing==='environment'?'user':'environment';save();startCam()};
  $('#bk').onclick=()=>{stopCam();S.phase='setup';save();renderSetup()};
  $('#go2').onclick=()=>{S.phase='run';S.start=Date.now();S.log=[];tracks={};beep(1);lockOn();save();renderRun()};
  startCam();
 }
 async function startCam(){
- try{stopCam();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.cam.facing,width:{ideal:1920},height:{ideal:1080}},audio:false});
+ try{stopCam();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.cam.facing,width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:60}},audio:false});
   attachVideo();looping=true;requestAnimationFrame(frame)}
  catch(e){const n=$('#seen');if(n)n.textContent='未能開啟鏡頭（'+(e.name||'錯誤')+'）。請允許鏡頭權限；如果喺預覽視窗內開唔到，請用瀏覽器直接開啟連結。仍然可以用格仔手動記圈。'}
 }
@@ -186,17 +189,23 @@ function stopCam(){looping=false;try{stream&&stream.getTracks().forEach(t=>t.sto
 function frame(ts){
  if(!looping)return;requestAnimationFrame(frame);
  const v=$('#v');if(!v||!v.videoWidth||busy||ts-lastRun<60)return;lastRun=ts;busy=true;
- try{const pw=S.cam.res,ph=Math.round(v.videoHeight*pw/v.videoWidth);
-  if(off.width!==pw||off.height!==ph){off.width=pw;off.height=ph}
-  octx.drawImage(v,0,0,pw,ph);
-  lastDets=detectMarkers(octx.getImageData(0,0,pw,ph).data,pw,ph,DICT);lastDim=[pw,ph];
+ try{const c=S.cam,vw=v.videoWidth,vh=v.videoHeight,k=c.res/vw,pw=Math.round(vw*k),ph=Math.round(vh*k);
+  let nx0=0,nx1=1,ny0=0,ny1=1;
+  if(c.mode==='zone'&&c.bw<1){const a=Math.max(0,c.pos-c.bw/2),b=Math.min(1,c.pos+c.bw/2);if(c.axis==='v'){nx0=a;nx1=b}else{ny0=a;ny1=b}}
+  const sx=Math.round(nx0*vw),sy=Math.round(ny0*vh),sw=Math.max(16,Math.round((nx1-nx0)*vw)),sh=Math.max(16,Math.round((ny1-ny0)*vh)),cw=Math.round(sw*k),ch=Math.round(sh*k);
+  if(off.width!==cw||off.height!==ch){off.width=cw;off.height=ch}
+  octx.drawImage(v,sx,sy,sw,sh,0,0,cw,ch);
+  const ds=detectMarkers(octx.getImageData(0,0,cw,ch).data,cw,ch,DICT),ox=sx*k,oy=sy*k;
+  for(const d of ds){d.corners=d.corners.map(p=>[p[0]+ox,p[1]+oy]);d.cx+=ox;d.cy+=oy}
+  lastDets=ds;lastDim=[pw,ph];
   fpsN++;if(ts-fpsT>1000){fps=fpsN*1000/(ts-fpsT);fpsN=0;fpsT=ts}
   onDets(lastDets,pw,ph);drawOverlay()}catch(e){}
  busy=false}
 function onDets(ds,pw,ph){
  const now=Date.now(),c=S.cam;
  for(const d of ds){const s=c.axis==='v'?d.cx/pw:d.cy/ph,tr=tracks[d.id];
-  if(tr&&now-tr.t<2000&&(tr.s-c.pos)*(s-c.pos)<0){const dir=s>tr.s?1:-1;if(c.dir===0||c.dir===dir)cross(d.id,now)}
+  if(c.mode==='zone'){if(!tr||now-tr.t>1500)cross(d.id,now)}
+  else if(tr&&now-tr.t<2000&&(tr.s-c.pos)*(s-c.pos)<0){const dir=s>tr.s?1:-1;if(c.dir===0||c.dir===dir)cross(d.id,now)}
   tracks[d.id]={s,t:now}}
  const n=$('#seen');if(n&&S.phase==='cam')n.textContent=(ds.length?'偵測到：'+ds.map(d=>d.id+(S.names[d.id-1]?' '+S.names[d.id-1]:'（未配對）')).join('、'):'暫時未見到佩章')+' ｜ '+fps.toFixed(0)+' 次/秒';
  const m=$('#meta');if(m&&S.phase==='run')m.textContent='見到 '+ds.length+' 個佩章 ｜ '+fps.toFixed(0)+' 次/秒 ｜ 總圈數 '+S.laps.reduce((a,l)=>a+l.length,0)+' ｜ 已跑 '+fmt(now-S.start)}
@@ -207,6 +216,7 @@ function cross(id,now){const i=id-1;if(i<0||i>=S.names.length)return;
 function drawOverlay(){
  const cv=$('#ov');if(!cv)return;const[pw,ph]=lastDim;if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph}
  const x=cv.getContext('2d'),c=S.cam;x.clearRect(0,0,pw,ph);
+ if(c.mode==='zone'&&c.bw<1){x.fillStyle='rgba(46,224,111,.15)';const a=Math.max(0,c.pos-c.bw/2),b=Math.min(1,c.pos+c.bw/2);if(c.axis==='v')x.fillRect(a*pw,0,(b-a)*pw,ph);else x.fillRect(0,a*ph,pw,(b-a)*ph)}
  x.strokeStyle='#2ee06f';x.lineWidth=Math.max(2,pw/320);x.beginPath();
  if(c.axis==='v'){x.moveTo(c.pos*pw,0);x.lineTo(c.pos*pw,ph)}else{x.moveTo(0,c.pos*ph);x.lineTo(pw,c.pos*ph)}x.stroke();
  x.font='bold '+Math.round(pw/32)+'px sans-serif';
