@@ -1,263 +1,264 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-HK">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>佩章鏡頭偵測測試</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>9 分鐘耐力跑計圈（鏡頭）</title>
 <style>
-  :root { color-scheme: light; --ink:#172033; --muted:#5d687a; --line:#d8deea; --panel:#fff; --bg:#f3f6fb; --accent:#1769e0; --good:#137547; --warn:#925400; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
-  main { max-width:1050px; margin:auto; padding:22px 16px 40px; }
-  h1 { font-size:clamp(1.5rem,4vw,2.15rem); margin:0 0 6px; }
-  p { margin:6px 0 14px; }
-  .muted { color:var(--muted); }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-top:14px; box-shadow:0 4px 18px #1c31500a; }
-  .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
-  label { display:grid; gap:5px; font-weight:650; font-size:.92rem; }
-  select,button { min-height:42px; border-radius:10px; border:1px solid var(--line); padding:8px 12px; font:inherit; background:white; color:var(--ink); }
-  button { cursor:pointer; font-weight:700; }
-  button.primary { background:var(--accent); color:white; border-color:var(--accent); }
-  button:disabled { opacity:.45; cursor:not-allowed; }
-  .camera-grid { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(230px,1fr); gap:14px; align-items:start; }
-  .video-wrap { position:relative; overflow:hidden; border-radius:12px; background:#101827; aspect-ratio:4/3; }
-  video, canvas { width:100%; height:100%; object-fit:contain; display:block; }
-  canvas { position:absolute; inset:0; }
-  .status { display:flex; gap:8px; align-items:center; font-weight:700; }
-  .dot { width:10px; height:10px; border-radius:50%; background:#9aa4b2; }
-  .dot.good { background:#16a05d; } .dot.warn { background:#d18a13; }
-  .big-id { font-size:clamp(2.8rem,8vw,4.5rem); line-height:1.1; font-weight:850; letter-spacing:-.04em; margin:12px 0; }
-  .id-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-  .chip { background:#e8f0ff; color:#124da8; border:1px solid #c9dcff; border-radius:999px; padding:5px 11px; font-weight:750; }
-  .chip.new { background:#e5f7ed; color:#09653b; border-color:#b7e7ca; }
-  .note { border-left:4px solid #e3a02c; padding:9px 12px; background:#fff7e8; border-radius:6px; }
-  .error { color:#a32b22; white-space:pre-wrap; }
-  .small { font-size:.9rem; }
-  @media(max-width:700px) { .camera-grid { grid-template-columns:1fr; } main { padding:16px 10px 30px; } }
-</style>
+:root{--bg:#eef2ee;--sf:#fff;--ink:#14231c;--mut:#5b6b62;--ac:#1f6b4a;--acink:#fff;--ln:#d3dcd5;--warn:#c99700;--bad:#c8372d;--hit:#cfeedd;
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a15;--sf:#17261e;--ink:#e8f0ea;--mut:#93a89b;--ac:#4fbf8b;--acink:#0b1710;--ln:#294036;--warn:#e8c531;--bad:#ff7066;--hit:#24533e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1a15;--sf:#17261e;--ink:#e8f0ea;--mut:#93a89b;--ac:#4fbf8b;--acink:#0b1710;--ln:#294036;--warn:#e8c531;--bad:#ff7066;--hit:#24533e;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"PingFang HK","Noto Sans HK","Microsoft JhengHei",sans-serif;-webkit-tap-highlight-color:transparent;min-height:100vh}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--sf);z-index:10}
+.wrap{max-width:980px;margin:0 auto;padding:0 14px 40px}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:0;border-radius:10px;padding:12px 20px;font-weight:700;background:var(--ac);color:var(--acink)}
+.btn.ghost{background:transparent;border:2px solid var(--ln);color:var(--ink)}
+.btn.bad{background:var(--bad);color:#fff}
+.btn:focus-visible,.tile:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+h1{font-size:26px;margin:26px 0 4px}
+p.sub{color:var(--mut);margin:0 0 18px}
+label{display:block;font-weight:700;margin:16px 0 6px}
+textarea,input{width:100%;font:inherit;color:var(--ink);background:var(--sf);border:2px solid var(--ln);border-radius:10px;padding:10px 12px}
+textarea{min-height:200px;resize:vertical}
+.row{display:flex;gap:12px}.row>div{flex:1}
+.err{color:var(--bad);font-weight:700;min-height:24px;margin:8px 0}
+/* running header */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:11;background:var(--sf);margin:0 -14px 14px;padding:10px 14px 0;border-bottom:2px solid var(--ln)}
+.bar .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.clock{font-size:clamp(48px,14vw,84px);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.clock.warn{color:var(--warn)}.clock.bad{color:var(--bad)}
+.meta{color:var(--mut);font-size:14px}
+.prog{height:8px;background:var(--ln);margin:10px -14px 0}
+.prog i{display:block;height:100%;width:0;background:var(--ac)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{position:relative;user-select:none;-webkit-user-select:none;touch-action:manipulation;background:var(--sf);border:2px solid var(--ln);border-radius:14px;padding:12px 12px 10px;min-height:118px;display:flex;flex-direction:column;justify-content:space-between;text-align:left}
+.tile .nm{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:34px}
+.tile .ct{font-size:56px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.tile .lt{color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
+.tile .mn{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:8px;border:2px solid var(--ln);background:transparent;font-size:20px;line-height:1;padding:0}
+.tile.hit{animation:hit .35s}
+@keyframes hit{0%{background:var(--hit);transform:scale(.97)}100%{background:var(--sf);transform:none}}
+.off .tile{opacity:.5;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.tile.hit{animation:none;background:var(--hit)}}
+/* results */
+.tbl{overflow-x:auto;background:var(--sf);border:2px solid var(--ln);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--ln);font-variant-numeric:tabular-nums}
+th{color:var(--mut);font-size:14px}
+td input{width:84px;padding:6px 8px}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+#csvbox{display:none;min-height:120px;margin-top:8px}
+.feed{color:var(--mut);font-size:14px;min-height:22px;margin:0 0 10px;font-variant-numeric:tabular-nums}
+.feed b{color:var(--ink)}
+.rows{display:grid;gap:8px;margin:12px 0}
+.rw{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--sf);border:2px solid var(--ln);border-radius:10px;padding:10px 14px;text-align:left;width:100%}
+.rw.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
+.rw .tg{color:var(--mut);font-variant-numeric:tabular-nums;font-size:14px}
+.rw .ok{color:var(--ac);font-weight:700}
+.note{background:var(--sf);border:2px solid var(--ln);border-radius:10px;padding:10px 14px;color:var(--mut);font-size:14px}
+.vid{position:relative;background:#000;border-radius:12px;overflow:hidden}.vid video,.vid canvas{display:block;width:100%}.vid canvas{position:absolute;inset:0;height:100%}.vid.sm{max-width:360px;margin-bottom:10px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 12px;margin:6px 0}select{width:100%;font:inherit;color:var(--ink);background:var(--sf);border:2px solid var(--ln);border-radius:10px;padding:10px 12px}input[type=range]{padding:0;border:0;background:transparent}</style>
 </head>
 <body>
-<main>
-  <h1>佩章鏡頭偵測測試</h1>
-  <p class="muted">用手機或電腦鏡頭讀取佩章上的 ArUco 編號（預期編號 1–15）。請先用一張已列印的佩章測試。</p>
-
-  <section class="panel">
-    <div class="controls">
-      <label>鏡頭
-        <select id="cameraSelect"><option value="">自動選擇</option></select>
-      </label>
-      <label>標記字典
-        <select id="dictionary">
-          <option value="4x4_50" selected>DICT_4X4_50（常用）</option>
-          <option value="4x4_100">DICT_4X4_100</option>
-          <option value="5x5_50">DICT_5X5_50</option>
-          <option value="5x5_100">DICT_5X5_100</option>
-          <option value="6x6_50">DICT_6X6_50</option>
-          <option value="6x6_100">DICT_6X6_100</option>
-          <option value="7x7_50">DICT_7X7_50</option>
-        </select>
-      </label>
-      <button class="primary" id="startBtn">啟動鏡頭</button>
-      <button id="stopBtn" disabled>停止</button>
-    </div>
-    <p id="libStatus" class="small muted">正在載入偵測程式……</p>
-    <p id="error" class="error" role="alert"></p>
-  </section>
-
-  <section class="panel camera-grid">
-    <div>
-      <div class="video-wrap">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="overlay"></canvas>
-      </div>
-      <p class="small muted">建議：保持佩章平整、四周白邊完整，避免反光；先讓標記佔畫面較大部分，再逐步拉遠測試。</p>
-    </div>
-    <div>
-      <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">未啟動</span></div>
-      <div class="muted small" style="margin-top:14px">最近辨認到的編號</div>
-      <div id="latestId" class="big-id">—</div>
-      <div id="latestHint" class="muted small">鏡頭啟動後，將佩章對準畫面。</div>
-      <div style="margin-top:18px;font-weight:750">本次已辨認編號</div>
-      <div id="seenIds" class="id-list"><span class="muted small">尚未辨認到</span></div>
-      <div style="margin-top:18px" class="small muted">讀取率：<strong id="fps">—</strong></div>
-      <button id="clearBtn" style="margin-top:12px">清除記錄</button>
-    </div>
-  </section>
-
-  <section class="panel">
-    <h2 style="font-size:1.12rem;margin:0 0 8px">測試注意</h2>
-    <div class="note small">如果完全讀不到，最常見原因是「標記字典」同印出 PDF 時使用的字典不一致。請選回生成佩章時使用的字典；若不確定，逐個選項試一次。</div>
-    <p class="small muted" style="margin-top:12px">瀏覽器限制：一般情況下，鏡頭只可在 HTTPS 網站或 localhost 使用；第一次啟動時請允許網站使用鏡頭。此頁面會在你的瀏覽器本機處理即時畫面，不會把影像上傳到伺服器。</p>
-  </section>
-</main>
-<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+<div class="wrap" id="app"></div>
 <script>
-(() => {
-  const $ = id => document.getElementById(id);
-  const video = $('video'), canvas = $('overlay'), ctx = canvas.getContext('2d');
-  let stream = null, running = false, raf = 0, lastTime = 0, frameCount = 0, fpsStart = 0;
-  let seen = new Set(), lastFoundAt = 0, cvReady = false;
-  const dictMap = {
-    '4x4_50':'DICT_4X4_50','4x4_100':'DICT_4X4_100',
-    '5x5_50':'DICT_5X5_50','5x5_100':'DICT_5X5_100',
-    '6x6_50':'DICT_6X6_50','6x6_100':'DICT_6X6_100','7x7_50':'DICT_7X7_50'
-  };
-  const libStatus = $('libStatus'), errorEl = $('error');
-  function setStatus(text, kind='') {
-    $('statusText').textContent = text;
-    $('statusDot').className = 'dot' + (kind ? ' '+kind : '');
-  }
-  function showError(message) { errorEl.textContent = message || ''; }
-  function waitForCv() {
-    if (window.cv && typeof cv.Mat === 'function') {
-      if (cv.getBuildInformation) ready();
-      else cv.onRuntimeInitialized = ready;
-      return;
-    }
-    setTimeout(waitForCv, 250);
-  }
-  function ready() {
-    if (cvReady) return;
-    cvReady = true;
-    libStatus.textContent = '偵測程式已載入。選擇字典後可以啟動鏡頭。';
-    $('startBtn').disabled = false;
-  }
-  async function populateCameras() {
-    try {
-      if (!navigator.mediaDevices?.enumerateDevices) return;
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const sel = $('cameraSelect'), old = sel.value;
-      sel.innerHTML = '<option value="">自動選擇</option>';
-      devices.filter(d => d.kind === 'videoinput').forEach((d, i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId; opt.textContent = d.label || `鏡頭 ${i+1}`;
-        sel.appendChild(opt);
-      });
-      if ([...sel.options].some(o => o.value === old)) sel.value = old;
-    } catch (_) {}
-  }
-  async function start() {
-    showError('');
-    // Camera access must not depend on OpenCV loading. Start the camera first; detection can be checked separately.
-    try {
-      await stop();
-      const deviceId = $('cameraSelect').value;
-      const videoConstraints = deviceId ? { deviceId: { exact: deviceId }, width:{ideal:1280}, height:{ideal:720} }
-                                        : { facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} };
-      stream = await navigator.mediaDevices.getUserMedia({ video:videoConstraints, audio:false });
-      video.srcObject = stream;
-      await video.play();
-      running = true;
-      $('startBtn').disabled = true; $('stopBtn').disabled = false;
-      setStatus('鏡頭運作中','good');
-      $('latestHint').textContent = '正在掃描畫面……';
-      await populateCameras();
-      fpsStart = performance.now(); frameCount = 0;
-      loop();
-    } catch (e) {
-      showError('無法啟動鏡頭：' + (e.message || e.name) + '\\n請確認網站使用 HTTPS／localhost，並允許鏡頭權限。');
-      setStatus('鏡頭未能啟動','warn');
-      $('startBtn').disabled = false; $('stopBtn').disabled = true;
-    }
-  }
-  async function stop() {
-    running = false; cancelAnimationFrame(raf);
-    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-    video.srcObject = null;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    $('stopBtn').disabled = true; $('startBtn').disabled = false;
-    setStatus('已停止');
-  }
-  function loop() {
-    if (!running || video.readyState < 2) { if (running) raf = requestAnimationFrame(loop); return; }
-    const w = video.videoWidth, h = video.videoHeight;
-    if (!w || !h) { raf = requestAnimationFrame(loop); return; }
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    ctx.clearRect(0,0,w,h);
-    if (!cvReady) {
-      $('statusText').textContent = '鏡頭運作中；偵測程式載入中';
-      $('statusDot').className = 'dot warn';
-      $('latestHint').textContent = '鏡頭已開啟。若此訊息持續，請重新載入頁面或檢查網絡。';
-      raf = requestAnimationFrame(loop);
-      return;
-    }
-    try {
-      if (!cv.aruco || typeof cv.aruco.detectMarkers !== 'function') {
-        $('statusText').textContent = '鏡頭運作中；此版本未提供 ArUco 偵測模組';
-        $('statusDot').className = 'dot warn';
-        $('latestHint').textContent = '鏡頭已成功開啟，但需要更換支援 ArUco 的偵測程式。';
-        raf = requestAnimationFrame(loop);
-        return;
-      }
-      const src = cv.imread(video);
-      const gray = new cv.Mat();
-      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-      const dictionaryKey = dictMap[$('dictionary').value];
-      const dictionaryConst = cv.aruco && cv.aruco[dictionaryKey];
-      if (!cv.aruco || typeof cv.aruco.getPredefinedDictionary !== 'function' ||
-          typeof cv.aruco.detectMarkers !== 'function' || dictionaryConst === undefined) {
-        src.delete(); gray.delete();
-        throw new Error('目前載入的 OpenCV.js 版本似乎沒有 ArUco 模組。請使用支援 ArUco 的 OpenCV.js build。');
-      }
-      const dictionary = cv.aruco.getPredefinedDictionary(dictionaryConst);
-      const corners = new cv.MatVector(), ids = new cv.Mat();
-      const params = cv.aruco.DetectorParameters ? new cv.aruco.DetectorParameters() : new cv.aruco_DetectorParameters();
-      cv.aruco.detectMarkers(gray, dictionary, corners, ids, params);
-      if (ids.rows > 0) {
-        cv.aruco.drawDetectedMarkers(src, corners, ids);
-        cv.imshow(canvas, src);
-        const found = [];
-        for (let i=0; i<ids.rows; i++) {
-          const id = ids.intAt(i,0);
-          found.push(id);
-          if (id >= 1 && id <= 15) seen.add(id);
-        }
-        found.sort((a,b)=>a-b);
-        $('latestId').textContent = found.join(', ');
-        $('latestHint').textContent = found.some(id=>id>=1&&id<=15) ? '已辨認到畫面中的標記' : '辨認到標記，但編號不在 1–15 範圍內';
-        $('statusText').textContent = '已辨認到 ' + found.length + ' 個標記';
-        $('statusDot').className = 'dot good';
-        lastFoundAt = performance.now();
-        renderSeen(found);
-      } else {
-        cv.imshow(canvas, src);
-        if (performance.now() - lastFoundAt > 1200) {
-          $('latestId').textContent = '—';
-          $('latestHint').textContent = '未見標記；請調整距離、角度或光線。';
-          setStatus('掃描中');
-        }
-      }
-      corners.delete(); ids.delete(); params.delete(); dictionary.delete(); gray.delete(); src.delete();
-      frameCount++;
-      const now = performance.now();
-      if (now - fpsStart >= 1000) { $('fps').textContent = Math.round(frameCount*1000/(now-fpsStart))+' fps'; fpsStart=now; frameCount=0; }
-    } catch (e) {
-      showError(e.message || String(e));
-      running = false; $('startBtn').disabled = false; $('stopBtn').disabled = true;
-      setStatus('偵測程式出錯','warn');
-      return;
-    }
-    raf = requestAnimationFrame(loop);
-  }
-  function renderSeen(current=[]) {
-    const el = $('seenIds'); el.innerHTML = '';
-    if (!seen.size) { el.innerHTML = '<span class="muted small">尚未辨認到 1–15 號</span>'; return; }
-    [...seen].sort((a,b)=>a-b).forEach(id => {
-      const chip = document.createElement('span');
-      chip.className = 'chip' + (current.includes(id) ? ' new' : '');
-      chip.textContent = String(id);
-      el.appendChild(chip);
-    });
-  }
-  $('startBtn').addEventListener('click', start);
-  $('stopBtn').addEventListener('click', stop);
-  $('clearBtn').addEventListener('click', () => { seen.clear(); renderSeen(); $('latestId').textContent='—'; });
-  $('dictionary').addEventListener('change', () => { if (running) { stop().then(start); } });
-  if (!navigator.mediaDevices?.getUserMedia) showError('此瀏覽器不支援鏡頭存取，請改用較新的 Chrome、Edge 或 Safari。');
-  waitForCv();
-  setTimeout(() => { if (!cvReady) libStatus.textContent = '鏡頭按鈕可先用來測試相機；偵測程式仍未載入，請確認網絡連線。'; }, 5000);
-  populateCameras();
-})();
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function makeDict(raw){const D={};for(const id in raw)D[raw[id].map(v=>v===0?1:0).join('')]=+id;return D}
+function rot4(g){const o=[];for(let r=0;r<4;r++)for(let c=0;c<4;c++)o.push(g[(3-c)*4+r]);return o}
+function detectMarkers(rgba,w,h,DICT){
+ const n=w*h,g=new Uint8Array(n);
+ for(let i=0,j=0;i<n;i++,j+=4)g[i]=(rgba[j]*77+rgba[j+1]*150+rgba[j+2]*29)>>8;
+ const W1=w+1,ii=new Uint32Array(W1*(h+1));
+ for(let y=0;y<h;y++){let row=0;for(let x=0;x<w;x++){row+=g[y*w+x];ii[(y+1)*W1+x+1]=ii[y*W1+x+1]+row}}
+ const r=Math.max(10,Math.round(w/16)),bin=new Uint8Array(n);
+ for(let y=0;y<h;y++){const y0=Math.max(0,y-r),y1=Math.min(h,y+r+1);
+  for(let x=0;x<w;x++){const x0=Math.max(0,x-r),x1=Math.min(w,x+r+1);
+   const s=ii[y1*W1+x1]-ii[y0*W1+x1]-ii[y1*W1+x0]+ii[y0*W1+x0],a=(x1-x0)*(y1-y0);
+   if(g[y*w+x]*a<s-8*a)bin[y*w+x]=1}}
+ const vis=new Uint8Array(n),q=new Int32Array(n),out=[],minS=Math.max(12,(w/80)|0);
+ for(let s0=0;s0<n;s0++){
+  if(!bin[s0]||vis[s0])continue;
+  let head=0,tail=0,minx=w,maxx=0,miny=h,maxy=0,sx=0,sy=0;q[tail++]=s0;vis[s0]=1;
+  while(head<tail){const p=q[head++],x=p%w,y=(p/w)|0;sx+=x;sy+=y;
+   if(x<minx)minx=x;if(x>maxx)maxx=x;if(y<miny)miny=y;if(y>maxy)maxy=y;
+   if(x>0&&bin[p-1]&&!vis[p-1]){vis[p-1]=1;q[tail++]=p-1}
+   if(x<w-1&&bin[p+1]&&!vis[p+1]){vis[p+1]=1;q[tail++]=p+1}
+   if(y>0&&bin[p-w]&&!vis[p-w]){vis[p-w]=1;q[tail++]=p-w}
+   if(y<h-1&&bin[p+w]&&!vis[p+w]){vis[p+w]=1;q[tail++]=p+w}}
+  const bw=maxx-minx+1,bh=maxy-miny+1;
+  if(bw<minS||bh<minS||bw>w*.8||bh>h*.8||minx===0||miny===0||maxx===w-1||maxy===h-1||tail/(bw*bh)<.2)continue;
+  const cx=sx/tail,cy=sy/tail;let b1=-1,d1=-1;
+  for(let k=0;k<tail;k++){const p=q[k],dx=p%w-cx,dy=((p/w)|0)-cy,d=dx*dx+dy*dy;if(d>d1){d1=d;b1=p}}
+  const x1=b1%w,y1=(b1/w)|0;let b2=-1,d2=-1;
+  for(let k=0;k<tail;k++){const p=q[k],dx=p%w-x1,dy=((p/w)|0)-y1,d=dx*dx+dy*dy;if(d>d2){d2=d;b2=p}}
+  const x2=b2%w,y2=(b2/w)|0,ux=x2-x1,uy=y2-y1;let bA=b1,bB=b1,mx=0,mn=0;
+  for(let k=0;k<tail;k++){const p=q[k],c=(p%w-x1)*uy-(((p/w)|0)-y1)*ux;if(c>mx){mx=c;bA=p}if(c<mn){mn=c;bB=p}}
+  if(bA===b1||bB===b1)continue;
+  let P=[[x1,y1],[bA%w,(bA/w)|0],[x2,y2],[bB%w,(bB/w)|0]];
+  let ar=0;for(let i=0;i<4;i++){const a=P[i],b=P[(i+1)%4];ar+=a[0]*b[1]-b[0]*a[1]}
+  if(ar<0){P=[P[0],P[3],P[2],P[1]];ar=-ar}ar/=2;
+  const ratio=tail/ar;if(ratio<.4||ratio>1.1)continue;
+  const sd=[0,1,2,3].map(i=>Math.hypot(P[i][0]-P[(i+1)%4][0],P[i][1]-P[(i+1)%4][1]));
+  if(Math.min(...sd)/Math.max(...sd)<.45)continue;
+  const[x0_,y0_]=P[0],[x1_,y1_]=P[1],[x2_,y2_]=P[2],[x3_,y3_]=P[3];
+  const dx1=x1_-x2_,dx2=x3_-x2_,dx3=x0_-x1_+x2_-x3_,dy1=y1_-y2_,dy2=y3_-y2_,dy3=y0_-y1_+y2_-y3_,den=dx1*dy2-dx2*dy1;
+  if(!den)continue;
+  const gg=(dx3*dy2-dx2*dy3)/den,hh=(dx1*dy3-dx3*dy1)/den,a=x1_-x0_+gg*x1_,b=x3_-x0_+hh*x3_,d=y1_-y0_+gg*y1_,e=y3_-y0_+hh*y3_;
+  const smp=(u,v)=>{const z=gg*u+hh*v+1,X=Math.round((a*u+b*v+x0_)/z),Y=Math.round((d*u+e*v+y0_)/z);return X<0||Y<0||X>=w||Y>=h?128:g[Y*w+X]};
+  const cell=[];
+  for(let rr=0;rr<6;rr++)for(let c=0;c<6;c++){const u=(c+.5)/6,v=(rr+.5)/6,o=.045;
+   cell.push((smp(u,v)*2+smp(u-o,v)+smp(u+o,v)+smp(u,v-o)+smp(u,v+o))/6)}
+  const m=cell.reduce((s,v)=>s+v,0)/36;let ds=0,dn=0,ls=0,ln=0;
+  for(const v of cell){if(v<m){ds+=v;dn++}else{ls+=v;ln++}}
+  if(!dn||!ln)continue;const thr=(ds/dn+ls/ln)/2;if(ls/ln-ds/dn<40)continue;
+  const dark=cell.map(v=>v<thr?1:0);let bd=0;
+  for(let rr=0;rr<6;rr++)for(let c=0;c<6;c++)if((rr===0||rr===5||c===0||c===5)&&dark[rr*6+c])bd++;
+  if(bd<19)continue;
+  let gr=[];for(let rr=1;rr<5;rr++)for(let c=1;c<5;c++)gr.push(dark[rr*6+c]);
+  for(let k=0;k<4;k++){const id=DICT[gr.join('')];if(id!==undefined){out.push({id,corners:P,cx:(P[0][0]+P[1][0]+P[2][0]+P[3][0])/4,cy:(P[0][1]+P[1][1]+P[2][1]+P[3][1])/4});break}gr=rot4(gr)}
+ }
+ return out}
+
+
+const DICT=makeDict({"1": [0, 0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 255, 255, 0, 255, 0], "2": [0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 255, 0, 255], "3": [255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 0, 0, 0, 255, 255, 0], "4": [0, 255, 0, 255, 0, 255, 0, 0, 255, 0, 0, 255, 255, 255, 255, 0], "5": [0, 255, 255, 255, 255, 0, 0, 255, 255, 255, 0, 0, 255, 255, 0, 255], "6": [255, 0, 0, 255, 255, 255, 255, 0, 0, 0, 255, 0, 255, 255, 255, 0], "7": [255, 255, 0, 0, 0, 255, 0, 0, 255, 255, 255, 255, 0, 0, 255, 0], "8": [255, 255, 255, 255, 255, 255, 255, 0, 255, 255, 0, 255, 255, 0, 255, 0], "9": [255, 255, 0, 0, 255, 255, 255, 255, 0, 255, 0, 255, 0, 255, 255, 0], "10": [255, 255, 255, 255, 255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 0, 255], "11": [0, 0, 0, 255, 0, 0, 0, 255, 255, 0, 255, 0, 0, 255, 255, 255], "12": [0, 0, 0, 0, 255, 255, 255, 0, 255, 0, 255, 255, 0, 255, 255, 255], "13": [0, 0, 255, 0, 255, 0, 255, 0, 0, 0, 0, 0, 255, 255, 255, 255], "14": [0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 255, 255, 0, 0, 0, 255], "15": [0, 0, 255, 0, 0, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 0]});
+let S={phase:'setup',names:[],laps:[],extra:[],start:0,end:0,dur:540000,lapLen:120,text:'',minLap:15,log:[],cam:{axis:'v',pos:.5,dir:0,res:960,facing:'environment'}};
+let timer=null,actx=null,wake=null,endArm=null,stream=null,looping=false,busy=false,lastRun=0,tracks={},lastDets=[],lastDim=[16,9],fpsN=0,fpsT=0,fps=0;
+const off=document.createElement('canvas'),octx=off.getContext('2d',{willReadFrequently:true});
+function save(){try{localStorage.setItem('run9-cam',JSON.stringify(S))}catch(e){}}
+function load(){try{const j=JSON.parse(localStorage.getItem('run9-cam')||'null');if(j&&j.names)S=Object.assign(S,j,{cam:Object.assign(S.cam,j.cam||{})})}catch(e){}}
+const fmt=ms=>{ms=Math.max(0,ms);const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const fmt1=ms=>{const t=Math.floor(ms/100)/10;return Math.floor(t/60)+':'+(t%60).toFixed(1).padStart(4,'0')};
+
+function beep(n){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+ for(let i=0;i<n;i++){const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=880;g.gain.value=.2;o.connect(g);g.connect(actx.destination);o.start(actx.currentTime+i*.4);o.stop(actx.currentTime+i*.4+.2)}}catch(e){}}
+async function lockOn(){try{wake=await navigator.wakeLock.request('screen')}catch(e){}}
+function lockOff(){try{wake&&wake.release();wake=null}catch(e){}}
+
+
+function renderSetup(){
+ $('#app').innerHTML=`<h1>9 分鐘耐力跑計圈（鏡頭版）</h1><p class="sub">第 1 位學生配對佩章 1 號，第 2 位配對 2 號，如此類推（最多 15 位）。</p>
+ <label for="names">學生名單（每行一位，或用逗號分隔）</label>
+ <textarea id="names" placeholder="陳大文&#10;李小明&#10;張美玲">${esc(S.text||'')}</textarea>
+ <div class="row"><div><label for="len">每圈長度（米）</label><input id="len" type="number" inputmode="numeric" min="1" value="${S.lapLen}"></div>
+ <div><label for="min">時間（分鐘）</label><input id="min" type="number" inputmode="decimal" min="1" step="0.5" value="${S.dur/60000}"></div>
+ <div><label for="ml">最短一圈（秒）</label><input id="ml" type="number" inputmode="numeric" min="1" value="${S.minLap}"></div></div>
+ <div class="err" id="err"></div><button class="btn" id="go" style="font-size:20px;padding:16px 28px">下一步：設定鏡頭</button>`;
+ $('#go').onclick=()=>{
+  const names=$('#names').value.split(/[\n,，、]+/).map(s=>s.trim()).filter(Boolean);
+  const len=parseFloat($('#len').value),mins=parseFloat($('#min').value),ml=parseFloat($('#ml').value);
+  if(!names.length){$('#err').textContent='請先輸入最少一位學生。';return}
+  if(names.length>15){$('#err').textContent='佩章只有 1 至 15 號，請減到 15 位以內。';return}
+  if(!(len>0)||!(mins>0)||!(ml>0)){$('#err').textContent='每圈長度、時間同最短一圈要大過 0。';return}
+  S=Object.assign(S,{phase:'cam',names,laps:names.map(()=>[]),extra:names.map(()=>0),start:0,end:0,dur:Math.round(mins*60000),lapLen:len,text:$('#names').value,minLap:ml,log:[]});
+  save();renderCam()};
+}
+const vidHTML=cls=>`<div class="vid ${cls}"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas></div>`;
+function renderCam(){
+ const c=S.cam,vv=c.axis==='v';
+ $('#app').innerHTML=`<h1>設定鏡頭</h1><p class="sub">將鏡頭對住過線位置，調整綠線。佩章嘅中心掃過綠線就計一圈。呢頁係測試模式，唔會計圈。</p>${vidHTML('')}
+ <div class="ctl"><div><label for="ax">綠線方向</label><select id="ax"><option value="v"${vv?' selected':''}>垂直線（學生左右橫過）</option><option value="h"${vv?'':' selected'}>水平線（學生上下過）</option></select></div>
+ <div><label for="dr">計圈方向</label><select id="dr"><option value="0"${c.dir===0?' selected':''}>任何方向</option><option value="1"${c.dir===1?' selected':''}>${vv?'由左至右':'由上至下'}</option><option value="-1"${c.dir===-1?' selected':''}>${vv?'由右至左':'由下至上'}</option></select></div>
+ <div><label for="ps">綠線位置</label><input id="ps" type="range" min="5" max="95" value="${Math.round(c.pos*100)}"></div>
+ <div><label for="rs">偵測解析度</label><select id="rs"><option value="640"${c.res===640?' selected':''}>640（快，只適合近距離）</option><option value="960"${c.res===960?' selected':''}>960（預設）</option><option value="1280"${c.res===1280?' selected':''}>1280（遠距離，較慢）</option></select></div></div>
+ <div class="note" id="seen">開啟鏡頭中…</div><div class="feed" id="feed" style="margin-top:8px"></div>
+ <div class="acts"><button class="btn" id="go2" style="font-size:20px;padding:16px 28px">開始計時</button><button class="btn ghost" id="flip">切換前後鏡頭</button><button class="btn ghost" id="bk">返回修改名單</button></div>`;
+ $('#ax').onchange=e=>{c.axis=e.target.value;save();renderCam()};
+ $('#dr').onchange=e=>{c.dir=+e.target.value;save()};
+ $('#ps').oninput=e=>{c.pos=e.target.value/100;save();drawOverlay()};
+ $('#rs').onchange=e=>{c.res=+e.target.value;save()};
+ $('#flip').onclick=()=>{c.facing=c.facing==='environment'?'user':'environment';save();startCam()};
+ $('#bk').onclick=()=>{stopCam();S.phase='setup';save();renderSetup()};
+ $('#go2').onclick=()=>{S.phase='run';S.start=Date.now();S.log=[];tracks={};beep(1);lockOn();save();renderRun()};
+ startCam();
+}
+async function startCam(){
+ try{stopCam();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.cam.facing,width:{ideal:1920},height:{ideal:1080}},audio:false});
+  attachVideo();looping=true;requestAnimationFrame(frame)}
+ catch(e){const n=$('#seen');if(n)n.textContent='未能開啟鏡頭（'+(e.name||'錯誤')+'）。請允許鏡頭權限；如果喺預覽視窗內開唔到，請用瀏覽器直接開啟連結。仍然可以用格仔手動記圈。'}
+}
+function attachVideo(){const v=$('#v');if(v&&stream){v.srcObject=stream;v.play().catch(()=>{})}}
+function stopCam(){looping=false;try{stream&&stream.getTracks().forEach(t=>t.stop())}catch(e){}stream=null}
+function frame(ts){
+ if(!looping)return;requestAnimationFrame(frame);
+ const v=$('#v');if(!v||!v.videoWidth||busy||ts-lastRun<60)return;lastRun=ts;busy=true;
+ try{const pw=S.cam.res,ph=Math.round(v.videoHeight*pw/v.videoWidth);
+  if(off.width!==pw||off.height!==ph){off.width=pw;off.height=ph}
+  octx.drawImage(v,0,0,pw,ph);
+  lastDets=detectMarkers(octx.getImageData(0,0,pw,ph).data,pw,ph,DICT);lastDim=[pw,ph];
+  fpsN++;if(ts-fpsT>1000){fps=fpsN*1000/(ts-fpsT);fpsN=0;fpsT=ts}
+  onDets(lastDets,pw,ph);drawOverlay()}catch(e){}
+ busy=false}
+function onDets(ds,pw,ph){
+ const now=Date.now(),c=S.cam;
+ for(const d of ds){const s=c.axis==='v'?d.cx/pw:d.cy/ph,tr=tracks[d.id];
+  if(tr&&now-tr.t<2000&&(tr.s-c.pos)*(s-c.pos)<0){const dir=s>tr.s?1:-1;if(c.dir===0||c.dir===dir)cross(d.id,now)}
+  tracks[d.id]={s,t:now}}
+ const n=$('#seen');if(n&&S.phase==='cam')n.textContent=(ds.length?'偵測到：'+ds.map(d=>d.id+(S.names[d.id-1]?' '+S.names[d.id-1]:'（未配對）')).join('、'):'暫時未見到佩章')+' ｜ '+fps.toFixed(0)+' 次/秒';
+ const m=$('#meta');if(m&&S.phase==='run')m.textContent='見到 '+ds.length+' 個佩章 ｜ '+fps.toFixed(0)+' 次/秒 ｜ 總圈數 '+S.laps.reduce((a,l)=>a+l.length,0)+' ｜ 已跑 '+fmt(now-S.start)}
+function cross(id,now){const i=id-1;if(i<0||i>=S.names.length)return;
+ if(S.phase==='cam'){feed('（測試）'+esc(S.names[i])+' 過線');return}
+ if(S.phase!=='run')return;const L=S.laps[i],prev=L.length?L[L.length-1]:0;
+ if(now-S.start-prev<S.minLap*1000)return;lap(i,true)}
+function drawOverlay(){
+ const cv=$('#ov');if(!cv)return;const[pw,ph]=lastDim;if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph}
+ const x=cv.getContext('2d'),c=S.cam;x.clearRect(0,0,pw,ph);
+ x.strokeStyle='#2ee06f';x.lineWidth=Math.max(2,pw/320);x.beginPath();
+ if(c.axis==='v'){x.moveTo(c.pos*pw,0);x.lineTo(c.pos*pw,ph)}else{x.moveTo(0,c.pos*ph);x.lineTo(pw,c.pos*ph)}x.stroke();
+ x.font='bold '+Math.round(pw/32)+'px sans-serif';
+ for(const d of lastDets){x.strokeStyle='#ffd400';x.beginPath();d.corners.forEach((p,k)=>k?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();x.stroke();
+  x.fillStyle='#ffd400';x.fillText(String(d.id),d.cx-6,d.cy+6)}}
+function renderRun(){
+ $('#app').innerHTML=`<div class="bar"><div class="top"><div><div class="clock" id="clk">${fmt(S.dur)}</div><div class="meta" id="meta"></div></div>
+ <button class="btn ghost" id="end">結束測驗</button></div><div class="prog"><i id="pg"></i></div></div>
+ <div class="feed" id="feed"></div>${vidHTML('sm')}
+ <div class="grid" id="grid">${S.names.map((n,i)=>`<div class="tile" id="t${i}" data-i="${i}" role="button" tabindex="0" aria-label="${esc(n)} 加一圈">
+ <button class="mn" data-u="${i}" aria-label="${esc(n)} 減一圈">−</button><div class="nm">${i+1} ${esc(n)}</div><div class="ct" id="c${i}">${S.laps[i].length}</div><div class="lt" id="l${i}"></div></div>`).join('')}</div>`;
+ S.names.forEach((_,i)=>paintTile(i));attachVideo();feed('等待佩章過線…');
+ $('#grid').onclick=e=>{const u=e.target.closest('[data-u]');if(u){e.stopPropagation();undo(+u.dataset.u);return}const t=e.target.closest('.tile');if(t)lap(+t.dataset.i)};
+ $('#end').onclick=armEnd;clearInterval(timer);timer=setInterval(tick,200);tick();
+ if(!stream)startCam();else if(!looping){looping=true;requestAnimationFrame(frame)}
+}
+function feed(t){S.log.unshift(t);S.log=S.log.slice(0,4);const f=$('#feed');if(f)f.innerHTML=S.log.map((x,k)=>k?x:'<b>'+x+'</b>').join(' ｜ ')}
+function paintTile(i){const L=S.laps[i];$('#c'+i).textContent=L.length;$('#l'+i).textContent=L.length?'最近 '+fmt(L[L.length-1]):'未過線'}
+function lap(i,auto){if(S.phase!=='run')return;const el=Date.now()-S.start;if(el>=S.dur)return;
+ S.laps[i].push(el);paintTile(i);feed(esc(S.names[i])+' 第 '+S.laps[i].length+' 圈'+(auto?'':'（手動）'));
+ const t=$('#t'+i);t.classList.remove('hit');void t.offsetWidth;t.classList.add('hit');try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}save()}
+function undo(i){if(S.phase!=='run'||!S.laps[i].length)return;S.laps[i].pop();paintTile(i);save()}
+function tick(){if(S.phase!=='run')return;const el=Date.now()-S.start;if(el>=S.dur){finish(true);return}
+ const rem=S.dur-el,c=$('#clk');c.textContent=fmt(Math.ceil(rem/1000)*1000);c.className='clock'+(rem<=10000?' bad':rem<=60000?' warn':'');$('#pg').style.width=(el/S.dur*100)+'%'}
+function armEnd(){const b=$('#end');if(endArm){clearTimeout(endArm);endArm=null;finish(false);return}
+ b.textContent='確定結束？';b.className='btn bad';endArm=setTimeout(()=>{endArm=null;const e=$('#end');if(e){e.textContent='結束測驗';e.className='btn ghost'}},3500)}
+function finish(auto){if(S.phase!=='run')return;clearInterval(timer);clearTimeout(endArm);endArm=null;stopCam();
+ S.phase='done';S.end=auto?S.start+S.dur:Date.now();S.endedAuto=auto;if(auto)beep(3);lockOff();save();renderDone()}
+function total(i){return S.laps[i].length*S.lapLen+(+S.extra[i]||0)}
+function csv(){const rows=[['姓名','圈數','每圈長度(米)','額外距離(米)','總距離(米)','每圈過線時間']];
+ S.names.forEach((n,i)=>rows.push([n,S.laps[i].length,S.lapLen,+S.extra[i]||0,total(i),S.laps[i].map(fmt1).join(' ')]));
+ return rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n')}
+function renderDone(){
+ const el=Math.min(S.end-S.start,S.dur),order=S.names.map((_,i)=>i).sort((a,b)=>S.laps[b].length-S.laps[a].length||a-b);
+ $('#app').innerHTML=`<h1>測驗完成</h1><p class="sub">${S.endedAuto?'時間到。':'已手動結束。'}實際計時 ${fmt1(el)}，共 ${S.names.length} 位學生，每圈 ${S.lapLen} 米。最後未完成一圈嘅距離可喺「額外距離」填寫。</p>
+ <div class="tbl"><table><thead><tr><th>名次</th><th>姓名</th><th>圈數</th><th>額外距離（米）</th><th>總距離（米）</th></tr></thead><tbody>
+ ${order.map((i,r)=>`<tr><td>${r+1}</td><td>${esc(S.names[i])}</td><td>${S.laps[i].length}</td><td><input type="number" inputmode="numeric" min="0" value="${+S.extra[i]||''}" data-x="${i}" aria-label="${esc(S.names[i])} 額外距離"></td><td id="d${i}">${total(i)}</td></tr>`).join('')}
+ </tbody></table></div>
+ <div class="acts"><button class="btn" id="cp">複製成 CSV</button><button class="btn ghost" id="again">重新開始</button></div>
+ <textarea id="csvbox" readonly></textarea>`;
+ $('#app').oninput=e=>{const x=e.target.dataset&&e.target.dataset.x;if(x!==undefined){S.extra[+x]=Math.max(0,parseFloat(e.target.value)||0);$('#d'+x).textContent=total(+x);save()}};
+ $('#cp').onclick=async()=>{const t=csv();try{await navigator.clipboard.writeText(t);$('#cp').textContent='已複製'}catch(e){const b=$('#csvbox');b.value=t;b.style.display='block';b.select();$('#cp').textContent='請手動複製下面內容'}};
+ $('#again').onclick=()=>{S.phase='setup';S.names=[];S.laps=[];S.extra=[];save();renderSetup()};
+}
+
+load();
+if(S.phase==='cam')renderCam();
+else if(S.phase==='run'){if(Date.now()-S.start>=S.dur)finish(true);else{lockOn();renderRun()}}
+else if(S.phase==='done'&&S.names.length)renderDone();
+else{S.phase='setup';renderSetup()}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.phase==='run')lockOn()});
+
 </script>
 </body>
 </html>
